@@ -1,6 +1,3 @@
-import json
-from json import JSONEncoder
-
 from flask import Flask, request, jsonify
 from flask_marshmallow import Marshmallow
 from flask_sqlalchemy import SQLAlchemy
@@ -10,7 +7,6 @@ from flask_sqlalchemy import SQLAlchemy
 # Init app
 app = Flask(__name__)
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///relationship.db'
-# app.config['SQLALCHEMY_BINDS'] = {'two' : 'sqlite:///two.db'}
 
 # Init database
 db = SQLAlchemy(app)
@@ -20,7 +16,7 @@ ma = Marshmallow(app)
 # Create class and Model Marshmallow Schema
 
 
-class Drink(db.Model):
+class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(50), unique=True)
     password = db.Column(db.String(200))
@@ -30,90 +26,50 @@ class Drink(db.Model):
         self.password = password
 
 
-class DrinkSchema(ma.Schema):
+class UserSchema(ma.Schema):
     class Meta:
         fields = ('id', 'name', 'password')
 
 
-drink_schema = DrinkSchema()
-drinks_schema = DrinkSchema(many=True)
+user_schema = UserSchema()
+users_schema = UserSchema(many=True)
 
 
-class Result:
-    success = False
-
-    def __init__(self, success):
-        self.success = success
+def parse_response(success, data, message):
+    return {"success": success, "data": data, "message": message}
 
 
-class ResultEncoder(JSONEncoder):
-    def default(self, o):
-        return o.__dict__
-
-
-# class ResultSchema(ma.Schema):
-#     class Meta:
-#         fields = ('success')
-#
-#
-# result_schema = ResultSchema()
-
-
-# class Veg(db.Model):
-#     __bind_key__ = 'two'
-#     id = db.Column(db.Integer, primary_key=True)
-#     name = db.Column(db.String(50), unique=True)
-#     image = db.Column(db.String(200))
-#     qty = db.Column(db.Integer)
-#     price = db.Column(db.Float)
-#
-#     def __init__(self, name, image, qty, price):
-#         self.name = name
-#         self.image = image
-#         self.qty = qty
-#         self.price = price
-
-#
-# class VegSchema(ma.Schema):
-#     class Meta:
-#         fields = ('id', 'name', 'image', 'qty', 'price')
-#
-#
-# veg_schema = VegSchema()
-# veg_schema = VegSchema(many=True)
-
-# Route settings
 # create a drink
-@app.route('/drink', methods=['POST'])
-def add_drink():
+@app.route('/registerUser', methods=['POST'])
+def register_user():
     name = request.json['name']
     password = request.json['password']
 
-    new_drink = Drink(name, password)
-    db.session.add(new_drink)
+    user = User(name, password)
+    db.session.add(user)
     db.session.commit()
-    return drink_schema.jsonify(new_drink)
+    return user_schema.jsonify(user)
 
 
 # Get all drinks
-@app.route('/drink', methods=['GET'])
-def get_drinks():
-    all_drinks = Drink.query.all()
-    result = drinks_schema.dump(all_drinks)
+@app.route('/getUsers', methods=['GET'])
+def get_users():
+    all_drinks = User.query.all()
+    result = users_schema.dump(all_drinks)
     return jsonify(result)
 
 
 # Get single drink
-@app.route('/drink/<id>', methods=['GET'])
-def get_drink(id):
-    drink = Drink.query.get(id)
-    return drink_schema.jsonify(drink)
+@app.route('/getUserById/<id>', methods=['GET'])
+def get_user_by_id(id):
+    drink = User.query.get(id)
+    return user_schema.jsonify(drink)
 
 
 # Update a drink
-@app.route('/drink/<id>', methods=['PUT'])
-def update_drink(id):
-    drink = Drink.query.get(id)
+@app.route('/updateUser/<id>', methods=['PUT'])
+def update_user_drink(id):
+    drink = User.query.get(id)
 
     name = request.json['name']
     image = request.json['image']
@@ -126,56 +82,33 @@ def update_drink(id):
     drink.price = price
 
     db.session.commit()
-    return drink_schema.jsonify(drink)
+    return user_schema.jsonify(drink)
 
 
 # Validate a drink
-@app.route('/validatedrink', methods=['POST'])
-def validate_drink():
+@app.route('/authenticate', methods=['POST'])
+def authenticate_user():
     name = request.json['name']
     password = request.json['password']
-    drink = Drink.query.filter_by(name=name, password=password)
-    items = drinks_schema.dump(drink)
+    drink = User.query.filter_by(name=name, password=password)
+    items = users_schema.dump(drink)
     print(items)
-    result = Result(success=False)
-    print(result.success)
     if len(items) == 0:
-        result.success = False
+        data = parse_response(success=False, data=False, message="Authentication Failed")
 
     else:
-        result.success = True
+        data = parse_response(success=True, data=True, message="Login Success")
 
-    return json.dumps(ResultEncoder().encode(result))
+    return jsonify(data)
 
 
 # Delete single drink
-@app.route('/drink/<id>', methods=['DELETE'])
-def delete_drink(id):
-    drink = Drink.query.get(id)
+@app.route('/deleteUser/<id>', methods=['DELETE'])
+def delete_user(id):
+    drink = User.query.get(id)
     db.session.delete(drink)
     db.session.commit()
-    return drink_schema.jsonify(drink)
-
-
-# @app.route('/veg', methods=['GET'])
-# def get_veg():
-#     all_drinks = Veg.query.all()
-#     result = veg_schema.dump(all_drinks)
-#     return jsonify(result)
-#
-#
-# @app.route('/veg', methods=['POST'])
-# def add_veg():
-#     name = request.json['name']
-#     image = request.json['image']
-#     qty = request.json['qty']
-#     price = request.json['price']
-#
-#     new_drink = Veg(name, image, qty, price)
-#     db.session.add(new_drink)
-#     db.session.commit()
-#     return veg_schema.jsonify(new_drink)
-#
+    return user_schema.jsonify(drink)
 
 
 # Run Server
