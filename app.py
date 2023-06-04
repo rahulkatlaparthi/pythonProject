@@ -52,7 +52,7 @@ def register_user():
 
 
 # Get all drinks
-@app.route('/getUsers', methods=['GET'])
+@app.route('/getUsers', methods=['POST'])
 def get_users():
     all_drinks = User.query.all()
     result = users_schema.dump(all_drinks)
@@ -60,15 +60,17 @@ def get_users():
 
 
 # Get single drink
-@app.route('/getUserById/<id>', methods=['GET'])
-def get_user_by_id(id):
+@app.route('/getUserById', methods=['POST'])
+def get_user_by_id():
+    id = request.json['id']
     drink = User.query.get(id)
     return user_schema.jsonify(drink)
 
 
 # Update a drink
-@app.route('/updateUser/<id>', methods=['PUT'])
-def update_user_drink(id):
+@app.route('/updateUser', methods=['POST'])
+def update_user_drink():
+    id = request.json['id']
     drink = User.query.get(id)
 
     name = request.json['name']
@@ -103,8 +105,9 @@ def authenticate_user():
 
 
 # Delete single drink
-@app.route('/deleteUser/<id>', methods=['DELETE'])
-def delete_user(id):
+@app.route('/deleteUser', methods=['POST'])
+def delete_user():
+    id = request.json['id']
     drink = User.query.get(id)
     db.session.delete(drink)
     db.session.commit()
